@@ -267,3 +267,44 @@ void ff_prores_idct_12(int16_t *block, const int16_t *qmat)
         idctSparseCol_int16_12bit(block + i);
     }
 }
+
+static inline void idct4ColPut_int16_12bit(uint16_t *dest, ptrdiff_t line_size, int16_t *in)
+{
+    const int X0 = 17734;
+    const int X1 = 42813;
+    const int X2 = 32768;
+    int a0 = (in[8*0] * X2);
+    int a2 = (in[8*2] * X2);
+    int a1 = in[8*1];
+    int a3 = in[8*3];
+    int c0 = a0 + a2;
+    int c1 = a0 - a2;
+    int c2 = a1 * X0 - a3 * X1;
+    int c3 = a3 * X0 + a1 * X1;
+    int d0 = av_clip_uintp2((c0 + c3) >> 16, 12);
+    int d1 = av_clip_uintp2((c1 + c2) >> 16, 12);
+    int d2 = av_clip_uintp2((c1 - c2) >> 16, 12);
+    int d3 = av_clip_uintp2((c0 - c3) >> 16, 12);
+
+    dest[0] = d0;
+    dest += line_size;
+    dest[0] = d1;
+    dest += line_size;
+    dest[0] = d2;
+    dest += line_size;
+    dest[0] = d3;
+}
+
+void ff_simple_idct84_put_int16_12bit(uint8_t *dest_, ptrdiff_t line_size, int16_t *block)
+{
+    uint16_t *dest = (uint16_t *)dest_;
+    int i;
+
+    line_size /= 2;
+
+    for (i = 0; i < 4; i++)
+        idctRowCondDC_int16_12bit(block + i * 8, 0);
+
+    for (i = 0; i < 8; i++)
+        idct4ColPut_int16_12bit(dest + i, line_size, block + i);
+}
